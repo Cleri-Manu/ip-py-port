@@ -74,7 +74,7 @@ def default(
     forwarded_for = context.data["X-Forwarded-For"]
     port = context.data["X-Forwarded-Port"]
     
-    return {"hello": "world", "forwarded_for": forwarded_for, "port": port}
+    return {"hello": "world", "forwarded_for": forwarded_for, "port": context.data}
  
 
 @app.get("/test", summary="Test endpoint")
