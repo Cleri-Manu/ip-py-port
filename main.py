@@ -72,7 +72,6 @@ def default(
     """For any request to this endpoint, the client ipv4 and port will be registered."""
     headers = {"Content-Type": "application/json"}
     forwarded_for = context.data["X-Forwarded-For"]
-    port = context.data["X-Forwarded-Port"]
     
     return {"hello": "world", "forwarded_for": forwarded_for, "port": context.data}
  
