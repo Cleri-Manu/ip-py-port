@@ -7,6 +7,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from starlette_context import middleware, plugins, context
 
  
 
@@ -25,9 +26,12 @@ app = FastAPI(title="IP:Port retriever")
 db = []
 
  
-
- 
-
+app.add_middleware(
+    middleware.ContextMiddleware,
+    plugins=(
+        plugins.ForwardedForPlugin(),
+    ),
+)
 def get_request_info(request: Request):
     if request.client:
         client = Client(client=request.client.host, port=request.client.port)
@@ -48,7 +52,27 @@ def streamer(times: int, text: bytes):
     yield f"\nOpen /clients/last to see the last client that connected to this server"
 
  
+@app.get("/register", summary="Test endpoint")
+def default(
+    *,
+    n: int = Query(10, description="Number of seconds to stream data"),
+    request: Request,
+):
+    """For any request to this endpoint, the client ipv4 and port will be registered."""
+    headers = {"Content-Type": "application/json"}
+    text = get_request_info(request)
+    return db[-1]
 
+@app.get("/register2", summary="Test endpoint")
+def default(
+    *,
+    n: int = Query(10, description="Number of seconds to stream data"),
+    request: Request,
+):
+    """For any request to this endpoint, the client ipv4 and port will be registered."""
+    headers = {"Content-Type": "application/json"}
+    forwarded_for = context.data["X-Forwarded-For"]
+    return {"hello": "world", "forwarded_for": forwarded_for}
  
 
 @app.get("/test", summary="Test endpoint")
@@ -61,18 +85,6 @@ def default(
     headers = {"Content-Type": "text/event-stream"}
     text = get_request_info(request)
     return StreamingResponse(streamer(n, text), headers=headers)
-
-
-@app.get("/register", summary="Test endpoint")
-def default(
-    *,
-    n: int = Query(10, description="Number of seconds to stream data"),
-    request: Request,
-):
-    """For any request to this endpoint, the client ipv4 and port will be registered."""
-    headers = {"Content-Type": "application/json"}
-    text = get_request_info(request)
-    return db[-1]
 
  
 
@@ -109,3 +121,27 @@ def reset():
     """Resets the database."""
     db.clear()
     return {"message": "Database cleared"}
+
+
+app2 = FastAPI(title="Auth")
+
+
+ 
+
+@app2.get("/auth", summary="Test endpoint")
+def default():
+    headers = {"Content-Type": "text/plain"}
+    return 'test'
+
+#creates an access token test, returns json
+@app.post("/auth/token", summary="Test endpoint")
+def create_token(response: Response):
+    response.headers["Content-Type"] = "application/json"
+    return {"access_token": "test"}
+
+@app.post("/api", summary="Reset database")
+def reset(response: Response):
+    response.headers["x-correlator"] = "235aw-aw33tbwa4t-waw4ue"
+    return {"message": "Test api"}
+
+#python -m uvicorn main:app --reload
